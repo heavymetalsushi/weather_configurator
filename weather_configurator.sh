@@ -6,8 +6,8 @@
 
 dbuser=root
 dbpass=pelnourmous69
-dbname=cacti
-
+dbcacti=cacti
+dbweather=new
 #
 # FUNCTIONS
 #
@@ -28,13 +28,10 @@ function rand_gen {
 
 # host_query returns an array of hosts in CACTI DB
 function get_hosts {
-	local r_string=$3
 	local host_query="
-	SELECT id,description 
-	FROM host;"
-	local host_file=/tmp/weather-${r_string}
-	mysql -N -u${dbuser} -p${dbpass} -e "${host_query}" ${dbname} > ${host_file}
-	echo ${host_file}
+	SELECT id 
+	FROM NODE;"
+	echo `mysql -N -u${dbuser} -p${dbpass} -e "${host_query}" ${dbweather}`
 }
 
 # get_graphdata creates a file in /tmp of graph to data associations
@@ -80,7 +77,7 @@ function get_graphdata {
 	AND
 		inside.local_graph_id
 	IS NOT NULL;"
-	mysql -N -u${dbuser} -p${dbpass} -e "${graph_query}" ${dbname} > ${graph_list}
+	mysql -N -u${dbuser} -p${dbpass} -e "${graph_query}" ${dbcacti} > ${graph_list}
 	echo ${graph_list}
 }
 
@@ -94,7 +91,7 @@ function get_hostname {
 		host
 	WHERE
 		host.id=${host_id};"
-	echo `mysql -N -u${dbuser} -p${dbpass} -e "${get_hostname_query}" ${dbname}`
+	echo `mysql -N -u${dbuser} -p${dbpass} -e "${get_hostname_query}" ${dbcacti}`
 }
 
 # get_description - gets the description associated with the provided id
@@ -107,7 +104,7 @@ function get_description {
 		host
 	WHERE
 		host.id=${host_id};"
-	echo `mysql -N -u${dbuser} -p${dbpass} -e "${get_description_query}" ${dbname}`
+	echo `mysql -N -u${dbuser} -p${dbpass} -e "${get_description_query}" ${dbcacti}`
 }
 
 # get_snmp - takesi host id verifies snmp status sets snmp community globally
@@ -120,7 +117,7 @@ function get_snmp {
 		host
 	WHERE 
 		host.id=${host_id};"
-	echo `mysql -N -u${dbuser} -p${dbpass} -e "${snmp_query}" ${dbname}`
+	echo `mysql -N -u${dbuser} -p${dbpass} -e "${snmp_query}" ${dbcacti}`
 } 
 
 # print_header - prints all scale width height info
@@ -214,7 +211,15 @@ function create_db {
 	return $?
 }
 
-# sync_db takes all cacti hosts and puts them into weather_generator db w/ inactive status and NULL 
+# db_activater - changes host array active or inactive NULL to T | T to F | F to T
+function db_active_status {
+	local hosts=$@
+	for i in ${hosts} ; do
+		echo $i argument
+	done
+}
+
+# sync_db takes all 'UP' cacti hosts and puts them into weather_generator db w/ inactive status and NULL 
 function sync_db {
 	local db_cacti=$1
 	local db_weather=$2
@@ -228,7 +233,9 @@ function sync_db {
 		(SELECT 
 			${db_cacti}.${cacti_table}.id
 		FROM
-			${db_cacti}.${cacti_table});"
+			${db_cacti}.${cacti_table}
+		WHERE
+			${db_cacti}.${cacti_table}.status=3);"
 		mysql -N -u${dbuser} -p${dbpass} -e "${db_copy_query}" ${db_weather}
 	else
 		echo compare
@@ -278,7 +285,7 @@ function get_coord {
 		${coord} IS NOT NULL
 	AND
 		NODE.id=${host_id};"
-	echo `mysql -N -u${dbuser} -p${dbpass} -e "${coord_query}" new`
+	echo `mysql -N -u${dbuser} -p${dbpass} -e "${coord_query}" ${dbweather}`
 }
 
 # check_coord - takes a node ID and verifies coordinates exist
@@ -306,7 +313,7 @@ function set_coord {
 		${coord} = ${new_value}
 	WHERE
 		NODE.id=${host_id};"
-	mysql -N -u${dbuser} -p${dbpass} -e "${coord_query}" new
+	mysql -N -u${dbuser} -p${dbpass} -e "${coord_query}" ${dbweather}
 }
 
 # create_nsmnode - creates all aspects of nsm entitiy
@@ -527,18 +534,18 @@ function set_dsend {
 	
 #echo "Please enter the Password for the Cacti Database"
 #read dbpass
-if !(db_check $dbname $dbuser $dbpass) ; then
+if !(db_check $dbcacti $dbuser $dbpass) ; then
 	echo "ERROR COULD NOT CONNECT TO $dbname DB"
 	exit 1
 fi
 
-
-#create_db new
+db_active_status $(get_hosts)
+#create_db ${dbweather}
 #for i in {1..100} ; do
-#mysql -N -u${dbuser} -p${dbpass} -e "insert into NODE values($i,'nodedesc','serial','version','Y',0,NULL)" new
+#mysql -N -u${dbuser} -p${dbpass} -e "insert into NODE values($i,'nodedesc','serial','version','Y',0,NULL)" ${dbweather}
 #done
-#sync_db cacti new
-set_types_db new NODE
+#sync_db cacti ${dbweather}
+#set_types_db ${dbweather} NODE
 #set_coord 10 xcoord 10
 #set_coord 10 ycoord 10
 #hrand=( $(rand_gen) )
