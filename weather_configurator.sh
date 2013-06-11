@@ -221,11 +221,16 @@ function set_types_db {
 	local nsm_oid_host=.1.3.6.1.4.1.25066.3.1.1.1.1.0
 	local ds_oid_host=.1.3.6.1.4.1.22267.1.1.1.1.1.0
 	local sm_oid_host=.1.3.6.1.4.1.25066.6.1.1.1.1.0
-	for i in `mysql -N -u${dbuser} -p${dbpass} -e "${node_query}" ${dbweather}` ; do
-	if !(snmpget -v2c -c $(get_snmp $i) $(get_hostname $i) ${nsm_oid_host} | grep "No\ Such" &>2) ; then
-		echo $(get_hostname $i)
-		
-	fi
+	for host in $(get_hosts) ; do
+	if !(snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${nsm_oid_host} | grep "No\ Such" &>2) ; then
+		set_dbval $host type \"NSM\"
+	else if !(snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${ds_oid_host} | grep "No\ Such" &>2) ; then
+		set_dbval $host type \"DSENTRY\"
+	else if !(snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${ds_oid_host} | grep "No\ Such" &>2) ; then
+		set_dbval $host type \"DSENTRY\"
+	else if !(snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${sm_oid_host} | grep "No\ Such" &>2) ; then
+		set_dbval $host type \"SM5200\"
+	fi fi fi fi
 	done
 }
 	
@@ -267,7 +272,6 @@ function set_dbval {
 		${db_property} = ${new_value}
 	WHERE
 		NODE.id=${host_id};"
-	echo mysql -N -u${dbuser} -p${dbpass} -e "${coord_query}" ${dbweather}
 	mysql -N -u${dbuser} -p${dbpass} -e "${coord_query}" ${dbweather}
 }
 
