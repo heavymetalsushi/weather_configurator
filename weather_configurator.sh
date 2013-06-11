@@ -8,6 +8,7 @@ dbuser=root
 dbpass=pelnourmous69
 dbcacti=cacti
 dbweather=new
+overlib="OVERLIBGRAPH  /graph_image.php?rra_id=0&graph_nolegend=true&graph_height=100&graph_width=300&local_graph_id="
 #
 # FUNCTIONS
 #
@@ -385,7 +386,7 @@ function set_nsmnode {
 	NODE nsm01.ps.lab\n
 	        LABELBGCOLOR 233 243 255\n
 	        LABEL {node:this:snmp_in_raw}\n
-	        TARGET snmp:${nsmnode_community}:${nsmnode_hostname}:172.17.200.25:1.3.6.1.4.1.25066.3.1.1.1.1.0:in\n
+	        TARGET snmp:${nsmnode_community}:${nsmnode_hostname}:1.3.6.1.4.1.25066.3.1.1.1.1.0:in\n
 	        LABELFONT 4\n
 	        ICON /var/www/html/cacti/images/nsm5200.png\n
 	        USESCALE none in\n
@@ -407,7 +408,7 @@ function set_nsmhd {
 	        LABELFONT 4\n
 	        LABELFONTCOLOR CONTRAST\n
 	        INFOURL /graph.php?rra_id=all&local_graph_id=${hd_graph}\n
-	        OVERLIBGRAPH  /graph_image.php?rra_id=0&graph_nolegend=true&graph_height=100&graph_width=300&local_graph_id=${hd_graph}\n
+	        ${overlib}${hd_graph}\n
 	        TARGET gauge:/var/www/html/cacti/rra/${hd_hostid}/${hd_data}.rrd:driveStatus:-\n
 	        USESCALE NSMRD absolute\n
 	        ICON /var/www/html/cacti/images/hd-nsm.png\n
@@ -431,7 +432,7 @@ function set_nsmfan {
 	        LABELFONT 4\n
 	        LABELFONTCOLOR CONTRAST\n
 	        INFOURL /graph.php?rra_id=all&local_graph_id=${fan_graph}\n
-	        OVERLIBGRAPH  /graph_image.php?rra_id=0&graph_nolegend=true&graph_height=100&graph_width=300&local_graph_id=${fan_graph}\n
+	        ${overlib}${fan_graph}\n
 	        TARGET gauge:/var/www/html/cacti/rra/${fan_hostid}/${fan_data}.rrd:driveStatus:-\n
 	        USESCALE NSMRD absolute\n
 	        ICON /var/www/html/cacti/images/fan-nsm.png\n
@@ -503,7 +504,7 @@ function set_dshd {
 	        LABELBGCOLOR none\n
 	        LABELOUTLINECOLOR none\n
 	        INFOURL /graph.php?rra_id=all&local_graph_id=${hd_graph}\n
-	        OVERLIBGRAPH  /graph_image.php?rra_id=0&graph_nolegend=true&graph_height=100&graph_width=300&local_graph_id=${hd_graph}\n
+	        ${overlib}${hd_graph}\n
 	        TARGET gauge:/var/www/html/cacti/rra/${hd_hostid}/${hd_data}.rrd:driveTemp:-\n
 	        USESCALE HDTMP in\n
 	        ICON /var/www/html/cacti/images/hdtmp.png\n
@@ -527,7 +528,7 @@ function set_dscpu {
 	        LABELBGCOLOR none\n
 	        LABELOUTLINECOLOR none\n
 	        INFOURL /graph.php?rra_id=all&local_graph_id=${cpu_graph}\n
-	        OVERLIBGRAPH  /graph_image.php?rra_id=0&graph_nolegend=true&graph_height=100&graph_width=300&local_graph_id=${cpu_graph}\n
+	        ${overlib}${cpu_graph}\n
 	        TARGET gauge:/var/www/html/cacti/rra/${cpu_hostid}/${cpu_data}.rrd:cpu:-\n
 	        USESCALE CPUUSE in\n
 	        ICON /var/www/html/cacti/images/cpuuse.png\n
@@ -543,16 +544,16 @@ function set_dsend {
 	local retention_graph=$4
 	local ds_retention="
 	NODE ${retention_hostdescription}_retention\n
-        LABEL RETENTION: {node:this:bandwidth_in:%d} DAYS\n
-        LABELBGCOLOR 233 243 255\n
-        LABELFONTCOLOR contrast\n
-        LABELFONT 4\n
-        LABELOUTLINECOLOR none\n
-        INFOURL /graph.php?rra_id=all&local_graph_id=${retention_graph}\n
-        OVERLIBGRAPH  /graph_image.php?rra_id=0&graph_nolegend=true&graph_height=100&graph_width=300&local_graph_id=${retention_graph}\n
-        TARGET gauge:/var/www/html/cacti/rra/${retention_hostid}/${retention_data}.rrd:DSRetention:-\n
-        USESCALE none in\n
-        POSITION ${retention_hostdescription} 0 235\n"
+	        LABEL RETENTION: {node:this:bandwidth_in:%d} DAYS\n
+	        LABELBGCOLOR 233 243 255\n
+	        LABELFONTCOLOR contrast\n
+	        LABELFONT 4\n
+	        LABELOUTLINECOLOR none\n
+	        INFOURL /graph.php?rra_id=all&local_graph_id=${retention_graph}\n
+	        ${overlib}${retention_graph}\n
+	        TARGET gauge:/var/www/html/cacti/rra/${retention_hostid}/${retention_data}.rrd:DSRetention:-\n
+	        USESCALE none in\n
+	        POSITION ${retention_hostdescription} 0 235\n"
 	echo -e ${ds_retention}
 }
 
