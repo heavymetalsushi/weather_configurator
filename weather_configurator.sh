@@ -211,14 +211,47 @@ function create_db {
 	return $?
 }
 
-# db_activater - changes host array active or inactive NULL to T | T to F | F to T
-function db_active_status {
+# db_set_status - changes host|s active or inactive NULL to T | T to F | F to T. once changed from NULL T|F are the only values
+function db_set_status {
 	local hosts=$@
-	for i in ${hosts} ; do
-		echo $i argument
+	for curr_host in ${hosts} ; do
+		local stat=( $(db_get_status ${curr_host}) )
+		if [[ "${stat}" =~ NULL|F ]] ; then
+			stat=T
+			local active_update="
+			UPDATE
+				NODE
+			SET
+				active='${stat}'
+			WHERE
+				NODE.id=${curr_host};"
+			mysql -N -u${dbuser} -p${dbpass} -e "${active_update}" ${dbweather}
+		else if [[ "${stat}" == 'T' ]] ; then 
+			stat=F
+			local active_update="
+			UPDATE
+				NODE
+			SET
+				active='${stat}'
+			WHERE
+				NODE.id=${curr_host};"
+			mysql -N -u${dbuser} -p${dbpass} -e "${active_update}" ${dbweather}
+		fi
+		fi
 	done
 }
 
+function db_get_status {
+	local host_id=$1
+	local get_hoststat_query="
+	SELECT
+		active
+	FROM	
+		NODE
+	WHERE
+		NODE.id=${host_id};"
+	echo `mysql -N -u${dbuser} -p${dbpass} -e "${get_hoststat_query}" ${dbweather}`
+}
 # sync_db takes all 'UP' cacti hosts and puts them into weather_generator db w/ inactive status and NULL 
 function sync_db {
 	local db_cacti=$1
@@ -539,7 +572,7 @@ if !(db_check $dbcacti $dbuser $dbpass) ; then
 	exit 1
 fi
 
-db_active_status $(get_hosts)
+db_set_status $(get_hosts)
 #create_db ${dbweather}
 #for i in {1..100} ; do
 #mysql -N -u${dbuser} -p${dbpass} -e "insert into NODE values($i,'nodedesc','serial','version','Y',0,NULL)" ${dbweather}
