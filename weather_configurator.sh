@@ -5,7 +5,7 @@
 #
 
 dbuser=root
-dbpass=trc7793
+dbpass=pelnourmous69
 dbname=cacti
 
 #
@@ -533,11 +533,11 @@ if !(db_check $dbname $dbuser $dbpass) ; then
 fi
 
 
-create_db new
+#create_db new
 #for i in {1..100} ; do
 #mysql -N -u${dbuser} -p${dbpass} -e "insert into NODE values($i,'nodedesc','serial','version','Y',0,NULL)" new
 #done
-sync_db cacti new
+#sync_db cacti new
 set_types_db new NODE
 #set_coord 10 xcoord 10
 #set_coord 10 ycoord 10
