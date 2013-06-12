@@ -27,7 +27,7 @@ function rand_gen {
 	echo `< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-32}`
 }
 
-# host_query returns an array of hosts in CACTI DB
+# host_query returns an array of hosts in WEATHER DB
 function get_hosts {
 	local host_query="
 	SELECT id 
@@ -212,25 +212,29 @@ function sync_db {
 
 # set_types_db - takes in a database and table for weatherdb and sets type serial and version for active nodes
 function set_types_db {
-	local weather_table=NODE
-	local node_query="
-	SELECT
-		id
-	FROM
-		${weather_table};"
 	local nsm_oid_host=.1.3.6.1.4.1.25066.3.1.1.1.1.0
+	local nsm_oid_serial=.1.3.6.1.4.1.25066.3.1.1.1.3.0
+	local nsm_oid_version=.1.3.6.1.4.1.25066.3.1.1.1.4.0
 	local ds_oid_host=.1.3.6.1.4.1.22267.1.1.1.1.1.0
+	local ds_oid_serial=.1.3.6.1.4.1.22267.1.1.1.1.3.0
+	local ds_oid_version=.1.3.6.1.4.1.22267.1.1.1.1.4.0
 	local sm_oid_host=.1.3.6.1.4.1.25066.6.1.1.1.1.0
+	local sm_oid_serial=.1.3.6.1.4.1.25066.6.1.1.1.3.0
+	local sm_oid_version=.1.3.6.1.4.1.25066.6.1.1.1.4.0
 	for host in $(get_hosts) ; do
 	if !(snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${nsm_oid_host} | grep "No\ Such" &>2) ; then
 		set_dbval $host type \"NSM\"
+		set_dbval $host serial `snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${nsm_oid_serial} | cut -s -d" " -f4`
+		set_dbval $host version `snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${nsm_oid_version} | cut -s -d" " -f4`
 	else if !(snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${ds_oid_host} | grep "No\ Such" &>2) ; then
 		set_dbval $host type \"DSENTRY\"
-	else if !(snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${ds_oid_host} | grep "No\ Such" &>2) ; then
-		set_dbval $host type \"DSENTRY\"
+		set_dbval $host serial `snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${ds_oid_serial} | cut -s -d" " -f4`
+		set_dbval $host version `snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${ds_oid_version} | cut -s -d" " -f4`
 	else if !(snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${sm_oid_host} | grep "No\ Such" &>2) ; then
 		set_dbval $host type \"SM5200\"
-	fi fi fi fi
+		set_dbval $host serial `snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${sm_oid_serial} | cut -s -d" " -f4`
+		set_dbval $host version `snmpget -v2c -c $(get_snmp ${host}) $(get_hostname ${host}) ${sm_oid_version} | cut -s -d" " -f4`
+	fi fi fi
 	done
 }
 	
