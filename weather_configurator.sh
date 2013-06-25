@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 
 #
 # GLOBAL VARIABLES
@@ -174,6 +174,8 @@ function db_set_status {
 	done
 }
 
+
+# db_get_status gets status of nodes and returns T|F|NULL for provided hostid
 function db_get_status {
 	local host_id=$1
 	local get_hoststat_query="
@@ -250,17 +252,19 @@ function record_count {
 	echo `mysql -N -u${dbuser} -p${dbpass} -e "${db_count_query}" ${db_dbase}`
 }
 
-# get_coord - takes host id and xcoord or ycoord and returns NULL or value
+# get_dbval - takes table  
 function get_dbval {
-	local host_id=$1
-	local db_property=$2
+	local db_table=$1
+	local db_column=$2
+	local where_column=$3
+	local value=$4
 	local get_query="
 	SELECT
-		${db_property}
+		${db_column}
 	FROM
-		NODE
+		${db_table}
 	WHERE
-		NODE.id=${host_id};"
+		${db_table}.${where_column}=${value};"
 	echo `mysql -N -u${dbuser} -p${dbpass} -e "${get_query}" ${dbweather}`
 }
 
@@ -277,6 +281,35 @@ function set_dbval {
 	WHERE
 		NODE.id=${host_id};"
 	mysql -N -u${dbuser} -p${dbpass} -e "${coord_query}" ${dbweather}
+}
+
+function fanhd_count { 
+	local host_id=$1
+	local device=$2
+	local hostfan_query="
+	SELECT
+		COUNT(*)
+	FROM
+		graph_templates_graph
+	WHERE
+		title_cache like '$(get_description ${host_id})%${device}%STATUS';"
+	echo `mysql -N -u${dbuser} -p${dbpass} -e "${hostfan_query}" ${dbcacti}`
+}
+
+function position_setter {
+	local x=300
+	local y=-150
+	local offset=400
+	for i in $(get_dbval NODE id type \'SM5200\') ; do
+		set_dbval $i xcoord $x
+		set_dbval $i ycoord $y
+		x=$(($x+${offset}))	
+	done
+	for i in $(get_dbval NODE id type \'NSM\') ; do
+		set_dbval $i xcoord $x
+		set_dbval $i ycoord $y
+		x=$(($x+${offset}))	
+	done
 }
 
 # create_nsmnode - creates all aspects of nsm entitiy
@@ -570,7 +603,7 @@ if !(db_check $dbcacti $dbuser $dbpass) ; then
 	exit 1
 fi
 
-$1 $2 $3 $4
+$1 $2 $3 $4 $5 $6
 
 #$db_set_status $(get_hosts)
 #create_db ${dbweather}
