@@ -604,29 +604,3 @@ if !(db_check $dbcacti $dbuser $dbpass) ; then
 fi
 
 $1 $2 $3 $4 $5 $6
-
-#$db_set_status $(get_hosts)
-#create_db ${dbweather}
-#for i in {1..100} ; do
-#mysql -N -u${dbuser} -p${dbpass} -e "insert into NODE values($i,'nodedesc','serial','version','Y',0,NULL)" ${dbweather}
-#done
-#sync_db cacti ${dbweather}
-#set_types_db ${dbweather} NODE
-#set_coord 10 xcoord 10
-#set_coord 10 ycoord 10
-#hrand=( $(rand_gen) )
-#hosts=( $(get_hosts $dbuser $dbpass $hrand) )
-#print_header
-#create_dsnode 7
-#create_nsmnode 9
-#print_footer
-#rm -f /tmp/weather*
-#echo "HOSTID	HOSTNAME"
-#cat $hosts
-#graphdata=( $(get_graphdata $dbuser $dbpass) )
-#cat $graphdata
-# CREATE DS ENTRY
-#hostname=( $(get_hostname 7) )
-#echo $hostname
-#description=( $(get_description 7) )
-#echo $description
