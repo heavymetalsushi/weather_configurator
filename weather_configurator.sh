@@ -38,13 +38,12 @@ function get_hosts {
 # get_graphdata creates a file in /tmp of graph to data associations
 function get_graphdata { 
 	local host_id=$1
-	local graph_list=/tmp/weather-$(rand_gen)
+	local title=$2
+	#local graph_list=/tmp/weather-$(rand_gen)
 	local graph_query="
 	SELECT DISTINCT
-	        data_local.host_id,
 	        data_template_data.local_data_id,
-		inside.local_graph_id,
-	        data_template_data.name_cache
+		inside.local_graph_id
 	FROM
 		(data_local,data_template_data)
 	LEFT JOIN
@@ -76,10 +75,13 @@ function get_graphdata {
 	AND
 		data_local.host_id=${host_id}
 	AND
+		inside.title_cache
+	LIKE
+		'${title}'
+	AND
 		inside.local_graph_id
 	IS NOT NULL;"
-	mysql -N -u${dbuser} -p${dbpass} -e "${graph_query}" ${dbcacti} > ${graph_list}
-	echo ${graph_list}
+	echo `mysql -N -u${dbuser} -p${dbpass} -e "${graph_query}" ${dbcacti}`
 }
 
 # get_hostname - gets the hostname associated with the provided id
@@ -252,12 +254,13 @@ function record_count {
 	echo `mysql -N -u${dbuser} -p${dbpass} -e "${db_count_query}" ${db_dbase}`
 }
 
-# get_dbval - takes table  
+# get_dbval - takes table column and where column, and value.  Returns result. 
 function get_dbval {
-	local db_table=$1
-	local db_column=$2
-	local where_column=$3
-	local value=$4
+	local db=$1
+	local db_table=$2
+	local db_column=$3
+	local where_column=$4
+	local value=$5
 	local get_query="
 	SELECT
 		${db_column}
@@ -292,7 +295,7 @@ function fanhd_count {
 	FROM
 		graph_templates_graph
 	WHERE
-		title_cache like '$(get_description ${host_id})%${device}%STATUS';"
+		title_cache LIKE '$(get_description ${host_id})%${device}%STATUS';"
 	echo `mysql -N -u${dbuser} -p${dbpass} -e "${hostfan_query}" ${dbcacti}`
 }
 
@@ -319,21 +322,21 @@ function create_nsmnode {
 	local host_description=( $(get_description ${nsm_id}) )
 	local snmp_community=( $(get_snmp ${nsm_id}) )
 	local nsm_graph_datafile=( $(get_graphdata ${nsm_id}) )
-	local nsm_hd_num=`grep "NSM\ DRIVE" $nsm_graph_datafile | wc -l`
-	local nsm_fan_num=`grep "FAN.*STATUS" $nsm_graph_datafile | wc -l`
-	local nsm_retention_data=`grep Retention ${nsm_graph_datafile} | cut -s -f2`
-	local nsm_retention_graph=`grep Retention ${nsm_graph_datafile} | cut -s -f3`
-	set_nsmnode ${host_hostname} ${host_description} ${snmp_community}
+	local nsm_hd_num=( $(fanhd_count ${nsm_id} DRIVE) )
+	local nsm_fan_num=( $(fanhd_count ${nsm_id} FAN) )
+	set_nsmnode ${host_hostname} ${host_description} ${snmp_community}\
+		    $(get_dbval ${dbweather} NODE xcoord id ${nsm_id})\
+		    $(get_dbval ${dbweather} NODE ycoord id ${nsm_id})
 	for (( hd_index=1; hd_index<=${nsm_hd_num}; hd_index++ )) ; do
-		local nsm_hd_line=`grep "NSM\ DRIVE\ ${hd_index}" ${nsm_graph_datafile}`
-		local nsm_hd_data=`echo ${nsm_hd_line} | cut -d" " -f2`
-		local nsm_hd_graph=`echo ${nsm_hd_line} | cut -d" " -f3`
+		local nsm_hd_line=$( (get_graphdata ${nsm_id} %DRIVE%${hd_index}%) )
+		local nsm_hd_data=`echo ${nsm_hd_line} | cut -d" " -f1`
+		local nsm_hd_graph=`echo ${nsm_hd_line} | cut -d" " -f2`
 		set_nsmhd ${nsm_id} ${host_description} ${hd_index} ${nsm_hd_graph} ${nsm_hd_data}
 	done
 	for (( fan_index=0; fan_index<${nsm_fan_num}; fan_index++ )) ; do
-		local nsm_fan_line=`grep "FAN\ ${fan_index}" ${nsm_graph_datafile}`
-		local nsm_fan_data=`echo ${nsm_fan_line} | cut -d" " -f2`
-		local nsm_fan_graph=`echo ${nsm_fan_line} | cut -d" " -f3`
+		local nsm_fan_line=$( (get_graphdata ${nsm_id} %FAN%${fan_index}%) )
+		local nsm_fan_data=`echo ${nsm_fan_line} | cut -d" " -f1`
+		local nsm_fan_graph=`echo ${nsm_fan_line} | cut -d" " -f2`
 		set_nsmfan ${nsm_id} ${host_description} ${fan_index} ${nsm_fan_graph} ${nsm_fan_data}
 	done
 }
@@ -343,16 +346,18 @@ function set_nsmnode {
 	local nsmnode_hostname=$1
 	local nsmnode_description=$2
 	local nsmnode_community=$3
+	local x=$4
+	local y=$5
 	local nsmnode_node="
 	############## ENDURA NSM - ${nsmnode_description} #################\n
-	NODE nsm01.ps.lab\n
-	        LABELBGCOLOR 233 243 255\n
-	        LABEL {node:this:snmp_in_raw}\n
-	        TARGET snmp:${nsmnode_community}:${nsmnode_hostname}:1.3.6.1.4.1.25066.3.1.1.1.1.0:in\n
-	        LABELFONT 4\n
-	        ICON /var/www/html/cacti/images/nsm5200.png\n
-	        USESCALE none in\n
-	        POSITION 700 300"
+	NODE ${nsmnode_description}\n
+		LABELBGCOLOR 233 243 255\n
+		LABEL {node:this:snmp_in_raw}\n
+		TARGET snmp:${nsmnode_community}:${nsmnode_hostname}:1.3.6.1.4.1.25066.3.1.1.1.1.0:in\n
+		LABELFONT 4\n
+		ICON /var/www/html/cacti/images/nsm5200.png\n
+		USESCALE none in\n
+		POSITION ${x} ${y}\n"
 	echo -e ${nsmnode_node}
 }
 
