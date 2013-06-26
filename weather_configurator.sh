@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 #
 # GLOBAL VARIABLES
@@ -295,8 +295,9 @@ function fanhd_count {
 	FROM
 		graph_templates_graph
 	WHERE
-		title_cache LIKE '$(get_description ${host_id})%${device}%STATUS';"
+		title_cache LIKE '$(get_description ${host_id})%${device}';"
 	echo `mysql -N -u${dbuser} -p${dbpass} -e "${hostfan_query}" ${dbcacti}`
+	echo mysql -N -u${dbuser} -p${dbpass} -e "${hostfan_query}" ${dbcacti}
 }
 
 function position_setter {
@@ -322,8 +323,8 @@ function create_nsmnode {
 	local host_description=( $(get_description ${nsm_id}) )
 	local snmp_community=( $(get_snmp ${nsm_id}) )
 	local nsm_graph_datafile=( $(get_graphdata ${nsm_id}) )
-	local nsm_hd_num=( $(fanhd_count ${nsm_id} DRIVE) )
-	local nsm_fan_num=( $(fanhd_count ${nsm_id} FAN) )
+	local nsm_hd_num=( $(fanhd_count ${nsm_id} DRIVE%STATUS) )
+	local nsm_fan_num=( $(fanhd_count ${nsm_id} FAN%STATUS) )
 	set_nsmnode ${host_hostname} ${host_description} ${snmp_community}\
 		    $(get_dbval ${dbweather} NODE xcoord id ${nsm_id})\
 		    $(get_dbval ${dbweather} NODE ycoord id ${nsm_id})
@@ -416,21 +417,21 @@ function create_dsnode {
 	local host_description=( $(get_description ${ds_id}) )
 	local snmp_community=( $(get_snmp ${ds_id}) )
 	local ds_graph_datafile=( $(get_graphdata ${ds_id}) )
-	local ds_hd_num=`grep DS\ HD $ds_graph_datafile | wc -l`
-	local ds_cpu_num=`grep CPU $ds_graph_datafile | wc -l`
-	local ds_retention_data=`grep Retention ${ds_graph_datafile} | cut -s -f2`
-	local ds_retention_graph=`grep Retention ${ds_graph_datafile} | cut -s -f3`
+	local ds_hd_num=( $(fanhd_count ${ds_id} DRIVE%STATUS%) )
+	local ds_cpu_num=( $(fanhd_count ${ds_id} CPU%Util%) )
+	local ds_retention_data=`echo $( (get_graphdata ${ds_id} %Retention) ) | cut -d" " -f1`
+	local ds_retention_graph=`echo $( (get_graphdata ${ds_id} %Retention) ) | cut -d" " -f2`
 	set_dsnode ${host_hostname} ${host_description} ${snmp_community}
 	for (( hd_index=1; hd_index<=${ds_hd_num}; hd_index++ )) ; do
-		local ds_hd_line=`grep "DS\ HD.*${hd_index}$" ${ds_graph_datafile}`
-		local ds_hd_data=`echo ${ds_hd_line} | cut -d" " -f2`
-		local ds_hd_graph=`echo ${ds_hd_line} | cut -d" " -f3`
+		local ds_hd_line=$( (get_graphdata ${ds_id} %DRIVE%${hd_index}%) )
+		local ds_hd_data=`echo ${ds_hd_line} | cut -d" " -f1`
+		local ds_hd_graph=`echo ${ds_hd_line} | cut -d" " -f2`
 		set_dshd ${ds_id} ${host_description} ${hd_index} ${ds_hd_graph} ${ds_hd_data}
 	done
 	for (( cpu_index=0; cpu_index<$ds_cpu_num; cpu_index++ )) ; do
-		local ds_cpu_line=`grep "CPU${cpu_index}$" ${ds_graph_datafile}`
-		local ds_cpu_data=`echo ${ds_cpu_line} | cut -d" " -f2`
-		local ds_cpu_graph=`echo ${ds_cpu_line} | cut -d" " -f3`
+		local ds_cpu_line=$( (get_graphdata ${ds_id} %CPU%${hd_index}) )
+		local ds_cpu_data=`echo ${ds_cpu_line} | cut -d" " -f1`
+		local ds_cpu_graph=`echo ${ds_cpu_line} | cut -d" " -f2`
 		set_dscpu ${ds_id} ${host_description} ${cpu_index} ${ds_cpu_graph} ${ds_cpu_data}
 	done
 	set_dsend ${ds_id} ${host_description} ${ds_retention_data} ${ds_retention_graph}
